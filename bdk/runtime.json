@@ -1,0 +1,11 @@
+{
+  "runtime": "python",
+  "version": "3.10+",
+  "framework": "stdlib-http",
+  "database": "sqlite3",
+  "build": "python scripts/build.py",
+  "typecheck": "python scripts/typecheck.py",
+  "test": "python -m unittest discover -s tests -p test_*.py",
+  "smoke": "python scripts/smoke.py",
+  "visual_smoke": "python scripts/visual_smoke.py"
+}

@@ -1,0 +1,55 @@
+{
+  "generated_by": "BDK Python Full-Stack Deterministic System Scaffold",
+  "engine_version": "1.4.0-catalog-management",
+  "artifact_id": "SCAFFOLD-6e65532af78bdad07a79",
+  "stack": "python-native-fullstack",
+  "verification": {
+    "status": "VERIFIED_CATALOG_MANAGEMENT",
+    "stages": [
+      "REVERSE_ENGINEERING:PASS",
+      "VISUAL_INTELLIGENCE_GATE:PASS",
+      "TYPECHECK:PASS",
+      "VISUAL_SMOKE:PASS",
+      "BUILD:PASS",
+      "HTTP_LOCAL_SMOKE:PASS",
+      "FUNCTIONAL_SMOKE:DEFERRED_TO_BLOCK2",
+      "CATALOG_CRUD_TEST:PASS",
+      "UNIT_TEST:PASS(31/31)",
+      "CATALOG_CRUD_TEST:PASS",
+      "HTTP_CATALOG_SMOKE:PASS"
+    ],
+    "official_bdk_order": "P-mtm4rn8f-89232e / owner-mtm4rn8h"
+  },
+  "requirements": [
+    "AUTH_REQUIRED",
+    "INACTIVE_DENY",
+    "KIDS_ONLY_KIDS",
+    "UNDER18_NO_ADULT",
+    "ADMIN_ALL",
+    "OPERATIONAL_USER_MANAGEMENT",
+    "OPERATIONAL_DELETE_DENY",
+    "SEED",
+    "NEGATIVE_TESTS",
+    "STATIC_ASSETS_SERVABLE",
+    "SESSION_REVALIDATION",
+    "SESSION_TTL",
+    "RBAC_BACKEND_ENFORCEMENT",
+    "INPUT_VALIDATION",
+    "LOGIN_RATE_LIMIT",
+    "BODY_SIZE_LIMIT",
+    "SECURITY_HEADERS",
+    "GENERIC_INTERNAL_ERRORS",
+    "HEALTH_ENDPOINT",
+    "ADMIN_CATALOG_CRUD",
+    "CATALOG_VALIDATION",
+    "CATALOG_RBAC",
+    "SEED_NON_RESTORING"
+  ],
+  "reverse_engineering": {
+    "required_before_build": true
+  },
+  "visual": {
+    "mode": "cinema-rental",
+    "quality_gate": "deterministic-source-contract"
+  }
+}

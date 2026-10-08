@@ -1,0 +1,15 @@
+services:
+  - type: web
+    runtime: python
+    name: bdk-locadora
+    plan: free
+    buildCommand: python3 scripts/build.py
+    startCommand: python3 server.py
+    healthCheckPath: /health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: LOCADORA_DB_PATH
+        value: /var/data/locadora.sqlite3

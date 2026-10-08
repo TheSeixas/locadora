@@ -1,0 +1,22 @@
+{
+  "contract_version": "1.0.0",
+  "mode": "cinema-rental",
+  "principles": [
+    "bounded-layout",
+    "typographic-hierarchy",
+    "surface-hierarchy",
+    "poster-framing",
+    "responsive-composition",
+    "accessible-controls",
+    "purposeful-motion"
+  ],
+  "required_checks": [
+    "responsive",
+    "focus",
+    "reduced_motion",
+    "form_labels",
+    "poster_aspect_ratio",
+    "design_tokens",
+    "surface_hierarchy"
+  ]
+}

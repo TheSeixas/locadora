@@ -1,0 +1,25 @@
+{
+  "status": "VERIFIED_BLOCK1",
+  "generated_by": "BDK Factory v1.78.5 - Block 1 Hardening",
+  "official_workspace": "owner-mtm4rn8h",
+  "official_order": "P-mtm4rn8f-89232e",
+  "checks": {
+    "reverse_engineering": "PASS",
+    "visual_intelligence": "PASS",
+    "visual_smoke": "PASS",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "unit_tests": "19/19 PASS",
+    "runtime_smoke": "PASS (manual local HTTP)",
+    "functional_smoke": "DEFERRED_TO_BLOCK2",
+    "session_revalidation": "PASS",
+    "rbac_backend": "PASS",
+    "input_validation": "PASS",
+    "security_hardening": "PASS"
+  },
+  "cleaned_from_delivery": [
+    "__pycache__",
+    "dist build output; regenerated code was not changed"
+  ],
+  "visual_mode": "cinema-rental"
+}
