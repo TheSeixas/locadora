@@ -1,66 +1,51 @@
-# BDK Locadora — V1.79.0 / Block 1 Hardening
+# Locadora Fênix — versão candidata 1.80.3
 
-Sistema full-stack em Python com SQLite. Esta versão fecha o **Bloco 1 — Correção e Confiabilidade** da auditoria.
+Aplicação web de catálogo de filmes com contas, regras de visibilidade por idade e administração do catálogo.
 
-## Iniciar localmente
+## Executar localmente (Windows CMD)
 
-```text
+1. Instale Python 3.10 ou superior.
+2. Defina um administrador inicial no terminal antes de iniciar:
+
+```bat
+set BOOTSTRAP_ADMIN_USERNAME=fenixadmin
+set BOOTSTRAP_ADMIN_PASSWORD=TroqueEstaSenhaPorUmaForte123!
+set HOST=127.0.0.1
+set COOKIE_SECURE=0
 python server.py
 ```
 
-ou:
+Use uma senha exclusiva, com pelo menos 12 caracteres. O administrador só é criado se ainda não houver uma conta ADMIN. As variáveis não são gravadas no repositório. Em outro terminal, abra http://127.0.0.1:3000/.
 
-```text
-run.bat
+## Deploy no Render
+
+Configure `BOOTSTRAP_ADMIN_USERNAME` e `BOOTSTRAP_ADMIN_PASSWORD` em Environment antes do deploy. Defina uma senha forte e exclusiva. Configure `HOST=0.0.0.0`, `COOKIE_SECURE=1` e `LOCADORA_DB_PATH` conforme o armazenamento escolhido. Não publique enquanto as variáveis de bootstrap não estiverem configuradas e o login administrativo não tiver sido testado. Em produção, o servidor agora se recusa a iniciar sem um ADMIN existente ou sem as variáveis de bootstrap.
+
+**Persistência:** o disco local do plano Free do Render é efêmero. Alterações no catálogo e usuários podem ser perdidas após reinício, spin-down ou novo deploy. Para dados duráveis, use armazenamento persistente ou banco gerenciado.
+
+## Cadastro e permissões
+
+- Cadastro público solicita usuário, senha e idade; não solicita e-mail.
+- O cadastro público sempre cria `CUSTOMER`, ignora tentativas de escolher `ADMIN`/`OPERATIONAL` e ativa a conta.
+- Na gestão interna, ADMIN pode criar clientes e operadores, editar contas não administrativas, alterar o perfil entre cliente/operador e redefinir senhas dessas contas.
+- OPERATIONAL pode cadastrar e editar clientes e alterar seu status; não pode promover perfis, redefinir senhas, excluir usuários nem administrar contas administrativas.
+- Usuário: 3–30 caracteres alfanuméricos, ponto, hífen ou sublinhado.
+- Senha: 8–128 caracteres; senha do primeiro administrador: mínimo de 12 caracteres no bootstrap.
+- Idade: informada em anos completos; o servidor valida o valor e calcula o perfil infantil. A interface não expõe a faixa técnica de validação na mensagem de erro.
+- Cadastro público: limite de 5 tentativas por IP por hora (em memória; reinícios limpam o contador).
+- Não há pagamentos, e-mail nem fluxo completo de aluguel nesta versão.
+
+## Testes
+
+```bat
+node --check public/app.js
+python -m unittest discover -s tests -v
+python scripts/typecheck.py
+python scripts/visual_smoke.py
+python scripts/build.py
+python scripts/smoke.py
 ```
 
-Abra `http://127.0.0.1:3000/`.
+A versão 1.80.3 é candidata para validação local; a versão congelada 1.79.1 não deve ser sobrescrita.
 
-## Contas de demonstração
-
-- `admin / admin123`
-- `operador / op123`
-- `crianca / kids123`
-- `inativo / inactive123`
-
-Essas credenciais são de laboratório e serão tratadas separadamente na preparação de produção do **Bloco 2**.
-
-## Regras de cadastro
-
-- Usuário: 3–30 caracteres, usando letras, números, `.`, `_` ou `-`.
-- Senha: 8–128 caracteres.
-- Idade: inteiro entre 0 e 120.
-- Perfil infantil é derivado automaticamente da idade (`<13`).
-- E-mail não faz parte desta aplicação.
-
-## O que foi fechado no Bloco 1
-
-- Sessões revalidam o usuário no banco a cada requisição protegida.
-- Sessões expiram por TTL.
-- Usuário desativado perde a sessão ativa.
-- OPERACIONAL não pode administrar ADMIN pelo backend.
-- ADMIN não pode excluir ADMIN.
-- Usuário não pode desativar a própria conta.
-- Validação de entrada ocorre no backend.
-- Login possui rate limit básico.
-- Payload HTTP possui limite de tamanho.
-- Erros internos não expõem detalhes Python ao cliente.
-- Cookies suportam `Secure` via configuração de ambiente.
-- Headers HTTP de segurança foram adicionados.
-- Endpoint `/health` foi adicionado.
-- Suíte passou de 6 para 19 testes.
-
-## Verificação
-
-- 19/19 testes unitários: PASS
-- Typecheck: PASS
-- Build: PASS
-- Visual smoke: PASS
-- HTTP local: PASS
-
-O deploy e a validação de produção ficam para o **Bloco 2**.
-
-
-## Gestão administrativa do catálogo — V1.79.0
-
-O perfil ADMIN possui CRUD de filmes com validação no backend. OPERACIONAL e CUSTOMER não podem alterar o catálogo.
+Após iniciar o servidor pela primeira vez, entre com o usuário definido em `BOOTSTRAP_ADMIN_USERNAME` (no exemplo, `fenixadmin`) e exatamente a senha definida em `BOOTSTRAP_ADMIN_PASSWORD`. Não use `admin` nem as credenciais antigas de demonstração. Se já existir uma conta ADMIN no banco, o bootstrap não troca a senha existente.

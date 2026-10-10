@@ -1,28 +1,5 @@
-# BDK Locadora — versão final
+# Locadora Fênix — início rápido
 
-## Executar no Windows
+No Windows CMD, defina as variáveis de administrador conforme o README e execute `python server.py`. Depois entre usando exatamente o usuário e a senha configurados nas variáveis. No exemplo, o usuário é `fenixadmin`, não `admin`. A senha precisa ter pelo menos 12 caracteres. Não há contas de demonstração nem senha administrativa embutida. Em produção (`HOST=0.0.0.0`), o servidor não inicia sem um ADMIN existente ou sem as variáveis de bootstrap configuradas.
 
-1. Abra esta pasta no Explorador.
-2. Abra um terminal nesta pasta.
-3. Execute `run.bat`.
-4. Abra `http://127.0.0.1:3000/`.
-
-## Contas de demonstração
-
-- `admin / admin123`
-- `operador / op123`
-- `crianca / kids123`
-- `inativo / inactive123`
-
-## O que foi validado
-
-- Reverse Engineering como primeiro gate
-- Visual Intelligence Gate
-- Visual Smoke
-- Typecheck
-- Build
-- 6 testes de domínio
-- Runtime Smoke
-- Functional Smoke
-
-O sistema usa Python + SQLite e possui uma interface de cinema responsiva, com hierarquia visual, cards de mídia enquadrados, estados de interação, acessibilidade básica e reduced-motion.
+Na gestão de usuários, ADMIN pode criar clientes e operadores e editar contas não administrativas. OPERATIONAL pode gerenciar dados básicos de clientes, mas não pode promover contas nem redefinir senhas. O cadastro público sempre cria cliente.

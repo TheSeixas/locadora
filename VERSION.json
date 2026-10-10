@@ -1,0 +1,24 @@
+{
+  "product": "Locadora Fênix",
+  "version": "1.80.3",
+  "status": "candidate-for-pre-deploy-validation",
+  "baseline": "V1.79.1 frozen; not overwritten",
+  "checks": {
+    "unit_tests": "56 passed (47 backend + 9 frontend contract)",
+    "javascript_syntax": "passed (node --check)",
+    "python_typecheck": "passed",
+    "visual_smoke": "passed",
+    "build": "passed",
+    "http_smoke": "passed: catalog CRUD, admin creates OPERATIONAL, admin edits/promotes non-admin user, operator privilege escalation denied, operator creates CUSTOMER, public registration, age filter, customer write denied, logout revocation",
+    "browser_ui_smoke": "V1.80.2 passed in headless Chromium with mocked API; frontend unchanged in V1.80.3, backend hardening added and retested"
+  },
+  "notes": [
+    "Admin can create CUSTOMER and OPERATIONAL users and edit non-admin accounts.",
+    "Operational users can create/edit customers and change customer status, but cannot assign roles, reset passwords, delete users, or manage ADMIN accounts.",
+    "User-facing age validation uses neutral copy without displaying the technical 0-120 range.",
+    "Public registration always forces CUSTOMER role on the backend.",
+    "W3C form guidance informed clear feedback; backend validation and authorization remain authoritative.",
+    "V1.79.1 remains frozen and unchanged; this version has not been deployed. Legacy demo-account cleanup is now one-time, JSON endpoints reject non-JSON payloads, mutation requests validate Origin when supplied, and rate-limit keys use the proxy-forwarded client IP and per-username login scope. Production startup fails closed if no admin exists and bootstrap secrets are missing.",
+    "Render Free filesystem is ephemeral; durable data requires persistent storage or a managed database."
+  ]
+}

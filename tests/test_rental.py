@@ -2,9 +2,12 @@ import importlib.util
 import io
 import time
 import unittest
+import tempfile
+import shutil
 from pathlib import Path
 
 root=Path(__file__).resolve().parents[1]
+TEST_USERS=[('u-admin','admin','admin123',35,1,0,'ADMIN'),('u-op','operador','op123',28,1,0,'OPERATIONAL'),('u-kids','crianca','kids123',12,1,1,'CUSTOMER'),('u-inactive','inativo','inactive123',25,0,0,'CUSTOMER')]
 spec=importlib.util.spec_from_file_location('server',root/'server.py')
 m=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
@@ -16,17 +19,80 @@ class FakeHandler:
 class RentalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.tempdir=tempfile.mkdtemp(prefix='locadora-fenix-tests-')
+        m.DB=Path(cls.tempdir)/'test.sqlite3'
         m.seed()
+        c=m._db()
+        for uid,username,password,age,active,is_kids,role in TEST_USERS:
+            c.execute('INSERT INTO users(id,username,password_hash,age,active,is_kids,role) VALUES(?,?,?,?,?,?,?)',(uid,username,m._hash(password),age,active,is_kids,role))
+        c.commit();c.close()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempdir,ignore_errors=True)
 
     def tearDown(self):
-        m.LOGIN_ATTEMPTS.clear()
-        m.SESSIONS.clear()
+        m.LOGIN_ATTEMPTS.clear();m.REGISTER_ATTEMPTS.clear();m.SESSIONS.clear()
         c=m._db()
-        seed_ids=tuple(x[0] for x in m.SEED['users'])
-        c.execute('DELETE FROM users WHERE id NOT IN (?,?,?,?)',seed_ids)
-        for uid,u,pwd,age,active,is_kids,role in m.SEED['users']:
-            c.execute('UPDATE users SET username=?,age=?,active=?,is_kids=?,role=? WHERE id=?',(u,age,active,is_kids,role,uid))
+        c.execute('DELETE FROM users')
+        for uid,username,password,age,active,is_kids,role in TEST_USERS:
+            c.execute('INSERT INTO users(id,username,password_hash,age,active,is_kids,role) VALUES(?,?,?,?,?,?,?)',(uid,username,m._hash(password),age,active,is_kids,role))
         c.commit();c.close()
+
+
+
+    def test_production_bootstrap_requires_admin_secrets(self):
+        original_db=m.DB
+        original_host=m.HOST
+        import os
+        original_env={key:os.environ.get(key) for key in ('BOOTSTRAP_ADMIN_USERNAME','BOOTSTRAP_ADMIN_PASSWORD')}
+        try:
+            m.DB=Path(self.tempdir)/'missing-bootstrap.sqlite3'
+            m.HOST='0.0.0.0'
+            for key in original_env:os.environ.pop(key,None)
+            with self.assertRaises(RuntimeError) as e:m.bootstrap_admin()
+            self.assertEqual(str(e.exception),'BOOTSTRAP_ADMIN_CONFIGURATION_REQUIRED')
+        finally:
+            m.DB=original_db;m.HOST=original_host
+            for key,value in original_env.items():
+                if value is None:os.environ.pop(key,None)
+                else:os.environ[key]=value
+
+    def test_legacy_demo_cleanup_runs_only_once(self):
+        # Use an isolated DB to prove that a real account named "admin" is not deleted on every restart.
+        original_db=m.DB
+        import os
+        original_env={key:os.environ.get(key) for key in ('BOOTSTRAP_ADMIN_USERNAME','BOOTSTRAP_ADMIN_PASSWORD')}
+        path=Path(self.tempdir)/'cleanup-once.sqlite3'
+        try:
+            m.DB=path
+            for key in original_env:os.environ.pop(key,None)
+            m.seed()
+            c=m._db()
+            c.execute('INSERT INTO users(id,username,password_hash,age,active,is_kids,role) VALUES(?,?,?,?,?,?,?)',('real-admin-name','admin',m._hash('CustomerPass123!'),30,1,0,'CUSTOMER'))
+            c.commit();c.close()
+            m.seed()
+            c=m._db();row=c.execute("SELECT id FROM users WHERE username='admin'").fetchone();c.close()
+            self.assertIsNotNone(row)
+        finally:
+            m.DB=original_db
+            for key,value in original_env.items():
+                if value is None:os.environ.pop(key,None)
+                else:os.environ[key]=value
+
+    def test_client_ip_uses_rightmost_valid_forwarded_address(self):
+        from http.server import BaseHTTPRequestHandler
+        h=object.__new__(m.Handler)
+        h.headers={'X-Forwarded-For':'198.51.100.7, 203.0.113.9'}
+        h.client_address=('127.0.0.1',12345)
+        self.assertEqual(h._client_ip(),'203.0.113.9')
+
+    def test_origin_validation_rejects_cross_origin_mutations(self):
+        h=object.__new__(m.Handler)
+        h.headers={'Origin':'https://attacker.example','Host':'locadora.example'}
+        self.assertFalse(h._origin_allowed())
+        h.headers={'Origin':'https://locadora.example','Host':'locadora.example'}
+        self.assertTrue(h._origin_allowed())
 
     def test_unauthenticated_user_cannot_access_catalog(self):
         with self.assertRaises(PermissionError) as e:m.visible_movies(None)
@@ -90,18 +156,73 @@ class RentalTests(unittest.TestCase):
         self.assertEqual(u['username'],'validnewuser')
         self.assertTrue(u['is_kids'])
 
+    def test_admin_can_create_operational_user(self):
+        u=m.create_user({'role':'ADMIN','id':'u-admin'},{'username':'newoperator','password':'validpass123','age':29,'active':True,'role':'OPERATIONAL'})
+        self.assertEqual(u['role'],'OPERATIONAL')
+        m.delete_user({'role':'ADMIN','id':'u-admin'},u['id'])
+
+    def test_operational_cannot_create_operational_user(self):
+        with self.assertRaises(PermissionError) as e:
+            m.create_user({'role':'OPERATIONAL','id':'u-op'},{'username':'newoperator','password':'validpass123','age':29,'active':True,'role':'OPERATIONAL'})
+        self.assertEqual(str(e.exception),'ROLE_ASSIGNMENT_FORBIDDEN')
+
+    def test_admin_cannot_create_another_admin_from_user_form(self):
+        with self.assertRaises(ValueError) as e:
+            m.create_user({'role':'ADMIN','id':'u-admin'},{'username':'secondadmin','password':'validpass123','age':29,'active':True,'role':'ADMIN'})
+        self.assertEqual(str(e.exception),'INVALID_ROLE')
+
+    def test_admin_can_edit_customer_and_promote_to_operator(self):
+        u=m.create_user({'role':'ADMIN','id':'u-admin'},{'username':'editableuser','password':'validpass123','age':24,'active':True})
+        changed=m.update_user({'role':'ADMIN','id':'u-admin'},u['id'],{'username':'editeduser','age':12,'active':True,'role':'OPERATIONAL'})
+        self.assertEqual(changed['username'],'editeduser')
+        self.assertEqual(changed['role'],'OPERATIONAL')
+        self.assertTrue(changed['is_kids'])
+        m.delete_user({'role':'ADMIN','id':'u-admin'},u['id'])
+
+    def test_admin_can_reset_non_admin_password(self):
+        u=m.create_user({'role':'ADMIN','id':'u-admin'},{'username':'passworduser','password':'validpass123','age':24,'active':True})
+        m.update_user({'role':'ADMIN','id':'u-admin'},u['id'],{'password':'changedpass123'})
+        c=m._db();stored=c.execute('SELECT password_hash FROM users WHERE id=?',(u['id'],)).fetchone()['password_hash'];c.close()
+        self.assertTrue(m._verify('changedpass123',stored))
+        m.delete_user({'role':'ADMIN','id':'u-admin'},u['id'])
+
+    def test_operational_can_edit_customer_but_not_change_role_or_password(self):
+        u=m.create_user({'role':'ADMIN','id':'u-admin'},{'username':'operatorcanedit','password':'validpass123','age':24,'active':True})
+        changed=m.update_user({'role':'OPERATIONAL','id':'u-op'},u['id'],{'username':'customerupdated','age':31,'active':True})
+        self.assertEqual(changed['username'],'customerupdated')
+        self.assertEqual(changed['role'],'CUSTOMER')
+        with self.assertRaises(PermissionError) as e:
+            m.update_user({'role':'OPERATIONAL','id':'u-op'},u['id'],{'role':'OPERATIONAL'})
+        self.assertEqual(str(e.exception),'ROLE_ASSIGNMENT_FORBIDDEN')
+        with self.assertRaises(PermissionError) as e:
+            m.update_user({'role':'OPERATIONAL','id':'u-op'},u['id'],{'password':'changedpass123'})
+        self.assertEqual(str(e.exception),'PASSWORD_RESET_FORBIDDEN')
+        m.delete_user({'role':'ADMIN','id':'u-admin'},u['id'])
+
+    def test_admin_accounts_cannot_be_edited_through_user_management(self):
+        with self.assertRaises(PermissionError) as e:
+            m.update_user({'role':'ADMIN','id':'u-admin'},'u-admin',{'username':'renamedadmin','age':36,'active':True,'role':'CUSTOMER'})
+        self.assertEqual(str(e.exception),'ADMIN_MANAGEMENT_FORBIDDEN')
+
+    def test_user_update_rejects_duplicate_username(self):
+        u=m.create_user({'role':'ADMIN','id':'u-admin'},{'username':'editableunique','password':'validpass123','age':24,'active':True})
+        with self.assertRaises(ValueError) as e:
+            m.update_user({'role':'ADMIN','id':'u-admin'},u['id'],{'username':'operador','age':24,'active':True,'role':'CUSTOMER'})
+        self.assertEqual(str(e.exception),'USERNAME_EXISTS')
+        m.delete_user({'role':'ADMIN','id':'u-admin'},u['id'])
+
     def test_session_revalidates_database_status(self):
         token='session-test'
         with m.LOCK:m.SESSIONS[token]={'user_id':'u-kids','created_at':time.time(),'expires_at':time.time()+60}
-        self.assertEqual(m.auth_user(FakeHandler('bdk_session='+token))['id'],'u-kids')
+        self.assertEqual(m.auth_user(FakeHandler('locadora_fenix_session='+token))['id'],'u-kids')
         c=m._db();c.execute('UPDATE users SET active=0 WHERE id=?',('u-kids',));c.commit();c.close()
-        self.assertIsNone(m.auth_user(FakeHandler('bdk_session='+token)))
+        self.assertIsNone(m.auth_user(FakeHandler('locadora_fenix_session='+token)))
         self.assertNotIn(token,m.SESSIONS)
 
     def test_expired_session_is_rejected(self):
         token='expired-test'
         with m.LOCK:m.SESSIONS[token]={'user_id':'u-admin','created_at':time.time()-100,'expires_at':time.time()-1}
-        self.assertIsNone(m.auth_user(FakeHandler('bdk_session='+token)))
+        self.assertIsNone(m.auth_user(FakeHandler('locadora_fenix_session='+token)))
 
     def test_login_rate_limit(self):
         key='rate-test'
@@ -174,6 +295,44 @@ class RentalTests(unittest.TestCase):
         # restore the fixture for the remaining suite
         seed_movie=next(x for x in m.SEED['movies'] if x[0]=='m5')
         c=m._db();c.execute('INSERT INTO movies(id,title,category,year,rating,description) VALUES(?,?,?,?,?,?)',tuple(seed_movie));c.commit();c.close()
+
+    def test_seed_removes_legacy_demo_accounts(self):
+        old_db=m.DB
+        isolated=Path(self.tempdir)/'legacy.sqlite3'
+        m.DB=isolated
+        try:
+            c=m._db()
+            c.execute("INSERT INTO users(id,username,password_hash,age,active,is_kids,role) VALUES(?,?,?,?,?,?,?)",('legacy-id','admin','salt:hash',35,1,0,'ADMIN'))
+            c.execute("INSERT OR REPLACE INTO app_meta(key,value) VALUES('demo_seed_version','1')")
+            c.commit();c.close()
+            m.seed()
+            c=m._db();rows=c.execute("SELECT username FROM users WHERE username IN ('admin','operador','crianca','inativo')").fetchall();c.close()
+            self.assertEqual(rows,[])
+        finally:
+            m.DB=old_db
+            isolated.unlink(missing_ok=True)
+
+    def test_public_registration_forces_customer_role_and_active_status(self):
+        u=m.register_customer({'username':'newcustomer','password':'longpassword123','age':17,'role':'ADMIN','active':False,'is_kids':True})
+        self.assertEqual(u['role'],'CUSTOMER');self.assertTrue(u['active']);self.assertFalse(u['is_kids'])
+
+    def test_public_registration_rejects_invalid_payload(self):
+        with self.assertRaises(ValueError):m.register_customer({'username':'ab','password':'longpassword123','age':18})
+
+    def test_bootstrap_admin_is_env_provisioned_and_not_reset(self):
+        import os
+        c=m._db();c.execute("DELETE FROM users WHERE role='ADMIN'");c.commit();c.close()
+        old_u=os.environ.get('BOOTSTRAP_ADMIN_USERNAME');old_p=os.environ.get('BOOTSTRAP_ADMIN_PASSWORD')
+        try:
+            os.environ['BOOTSTRAP_ADMIN_USERNAME']='secureadmin';os.environ['BOOTSTRAP_ADMIN_PASSWORD']='VeryStrongLocalPass123!'
+            self.assertTrue(m.bootstrap_admin());self.assertFalse(m.bootstrap_admin())
+            c=m._db();row=c.execute("SELECT role FROM users WHERE username='secureadmin'").fetchone();c.close()
+            self.assertEqual(row['role'],'ADMIN')
+        finally:
+            if old_u is None:os.environ.pop('BOOTSTRAP_ADMIN_USERNAME',None)
+            else:os.environ['BOOTSTRAP_ADMIN_USERNAME']=old_u
+            if old_p is None:os.environ.pop('BOOTSTRAP_ADMIN_PASSWORD',None)
+            else:os.environ['BOOTSTRAP_ADMIN_PASSWORD']=old_p
 
     def test_body_limit(self):
         class BodyHandler:

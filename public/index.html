@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <title>BDK Generated Site</title>
+  <title>Locadora Fênix</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -12,35 +12,36 @@
   <div class="ambient ambient-two" aria-hidden="true"></div>
   <main class="shell">
     <section id="login" class="auth-screen">
-      <div class="brand-lockup"><span class="brand-mark">B</span><div><p class="eyebrow">BDK FACTORY · PYTHON</p><p class="brand-name">Locadora</p></div></div>
+      <div class="brand-lockup"><span class="brand-mark">F</span><div><p class="eyebrow">CINEMA EM CASA</p><p class="brand-name">Locadora Fênix</p></div></div>
       <div class="auth-grid">
         <div class="auth-copy">
           <span class="pill">CATÁLOGO PRIVADO</span>
           <h1>Filmes para <em>cada sessão.</em></h1>
-          <p>Acesse um catálogo protegido por autenticação, idade, status e papel de usuário.</p>
+          <p>Explore nosso catálogo com uma experiência simples, segura e adequada ao seu perfil.</p>
           <div class="feature-list"><span>✦ Acesso seguro</span><span>✦ Catálogo por perfil</span><span>✦ Gestão operacional</span></div>
         </div>
         <div class="auth-card">
-          <div class="card-head"><p class="overline">Entrar</p><h2>Bem-vindo de volta</h2><p>Use uma conta seed para testar as regras.</p></div>
+          <div class="card-head"><p class="overline">Entrar</p><h2>Bem-vindo de volta</h2><p>Entre com sua conta ou crie seu acesso gratuitamente.</p></div>
           <form id="loginForm" novalidate>
             <label for="username">Usuário</label>
-            <input id="username" name="username" autocomplete="username" required placeholder="ex.: admin">
+            <input id="username" name="username" autocomplete="username" required placeholder="seu usuário">
             <label for="password">Senha</label>
             <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="sua senha">
             <button class="btn btn-primary" type="submit"><span>Entrar no catálogo</span><span aria-hidden="true">→</span></button>
             <p id="loginError" class="error" role="alert"></p>
           </form>
-          <details class="seed-details"><summary>Contas de demonstração</summary><div class="seed-list"><span><b>admin</b> · admin123</span><span><b>operador</b> · op123</span><span><b>crianca</b> · kids123</span><span><b>inativo</b> · inactive123</span></div></details>
+          <button id="openRegister" class="btn btn-ghost" type="button">Criar minha conta</button>
         </div>
       </div>
     </section>
 
     <section id="app" hidden>
       <header class="topbar">
-        <div class="brand-lockup"><span class="brand-mark">B</span><div><p class="eyebrow">BDK FACTORY</p><p class="brand-name">Locadora</p></div></div>
+        <div class="brand-lockup"><span class="brand-mark">F</span><div><p class="eyebrow">CINEMA EM CASA</p><p class="brand-name">Locadora Fênix</p></div></div>
         <div class="topbar-right"><div class="session-chip"><span class="status-dot"></span><span id="role"></span></div><button id="logout" class="btn btn-ghost" type="button">Sair</button></div>
       </header>
 
+      <p id="appNotice" class="app-notice" role="status" aria-live="polite"></p>
       <section class="hero-panel">
         <div class="hero-copy"><span class="pill pill-accent">SEU CATÁLOGO</span><h1>Hoje tem filme.</h1><p id="hello" class="hero-subtitle"></p></div>
         <div class="hero-stat"><span class="stat-number" id="movieCount">0</span><span class="stat-label">títulos disponíveis</span></div>
@@ -63,6 +64,22 @@
         <div id="adminMovies" class="users-list"></div>
       </section>
 
+
+
+      <dialog id="userDialog" class="movie-dialog" aria-labelledby="userDialogTitle">
+        <form id="userForm" class="movie-form" novalidate>
+          <div class="section-head"><div><p class="overline">Gestão de acessos</p><h2 id="userDialogTitle">Cadastrar usuário</h2><p id="userDialogDescription">O novo acesso será criado como cliente.</p></div><button id="closeUserDialog" class="btn btn-ghost" type="button">Fechar</button></div>
+          <input id="userId" type="hidden">
+          <label for="newUsername">Usuário</label><input id="newUsername" minlength="3" maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}" required autocomplete="off">
+          <div id="newPasswordField"><label id="newPasswordLabel" for="newPassword">Senha inicial</label><input id="newPassword" type="password" minlength="8" maxlength="128" required autocomplete="new-password"><p id="newPasswordHint" class="form-hint" hidden>Deixe em branco para manter a senha atual.</p></div>
+          <label for="newAge">Idade (anos completos)</label><input id="newAge" type="number" min="0" max="120" step="1" value="18" required>
+          <div id="newRoleField"><label for="newRole">Perfil de acesso</label><select id="newRole"><option value="CUSTOMER">Cliente</option><option value="OPERATIONAL">Operador</option></select></div>
+          <div id="newActiveField"><label for="newActive">Status da conta</label><select id="newActive"><option value="true">Ativa</option><option value="false">Inativa</option></select></div>
+          <p id="userFormError" class="error" role="alert" aria-live="polite"></p>
+          <button id="saveUserButton" class="btn btn-primary" type="submit">Cadastrar usuário</button>
+        </form>
+      </dialog>
+
       <dialog id="movieDialog" class="movie-dialog">
         <form id="movieForm" method="dialog" class="movie-form">
           <div class="section-head"><div><p class="overline" id="movieFormMode">Novo título</p><h2 id="movieDialogTitle">Adicionar filme</h2><p>Os dados são validados no backend antes de serem salvos.</p></div><button id="closeMovieDialog" class="btn btn-ghost" type="button">Fechar</button></div>
@@ -81,8 +98,20 @@
         </form>
       </dialog>
 
-      <footer class="footer"><span>BDK Factory · sistema gerado em Python</span><span>SQLite · RBAC · testes automatizados</span></footer>
+      <footer class="footer"><span>Locadora Fênix</span><span>Seu próximo filme começa aqui.</span></footer>
     </section>
+
+      <dialog id="registerDialog" class="movie-dialog" aria-labelledby="registerTitle">
+        <form id="registerForm" class="movie-form" novalidate>
+          <div class="section-head"><div><p class="overline">Novo cliente</p><h2 id="registerTitle">Criar sua conta</h2><p>Preencha os dados para acessar o catálogo.</p></div><button id="closeRegister" class="btn btn-ghost" type="button">Fechar</button></div>
+          <label for="registerUsername">Usuário</label><input id="registerUsername" autocomplete="username" minlength="3" maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}" required aria-describedby="registerHint" placeholder="3 a 30 caracteres">
+          <p id="registerHint" class="form-hint">Use letras, números, ponto, hífen ou sublinhado.</p>
+          <label for="registerPassword">Senha</label><input id="registerPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="Mínimo de 8 caracteres">
+          <label for="registerAge">Idade (anos completos)</label><input id="registerAge" type="number" min="0" max="120" step="1" required>
+          <p id="registerError" class="error" role="alert" aria-live="polite"></p>
+          <button class="btn btn-primary" type="submit">Criar conta <span aria-hidden="true">→</span></button>
+        </form>
+      </dialog>
   </main>
   <script src="/app.js" defer></script>
 </body>

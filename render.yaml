@@ -12,4 +12,8 @@ services:
       - key: COOKIE_SECURE
         value: "1"
       - key: LOCADORA_DB_PATH
-        value: /var/data/locadora.sqlite3
+        value: data/locadora.sqlite3
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false

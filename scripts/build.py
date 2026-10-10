@@ -6,5 +6,5 @@ for f in files:
     if not f.exists(): raise SystemExit(f'BUILD_INPUT_MISSING:{f.relative_to(root)}')
 if not compileall.compile_dir(str(root),quiet=1,force=True): raise SystemExit('PYTHON_COMPILE_FAILED')
 (root/'dist').mkdir(exist_ok=True)
-(root/'dist'/'BUILD_OK.json').write_text('{"status":"PASS","contract":"bdk-rental-python-fullstack"}\n',encoding='utf-8')
+(root/'dist'/'BUILD_OK.json').write_text('{"status":"PASS","contract":"locadora-fenix-fullstack"}\n',encoding='utf-8')
 print('build_ok')
